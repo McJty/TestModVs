@@ -30,8 +30,9 @@ namespace Test
         {
             if (blockSel == null)
             {
-                SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api, slot);
-                inventory.LateInitialize("xxx", api, slot.Itemstack);
+                SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
+                inventory.SyncFromSeedBag(slot.Itemstack);
+                inventory.OnInventoryClosed += OnCloseInventory;
 
                 TestMod mod = api.ModLoader.GetModSystem<TestMod>();
                 mod.seedBagInventories.Add((byEntity as EntityPlayer).Player.PlayerUID, inventory);
@@ -50,6 +51,16 @@ namespace Test
             {
                 handling = EnumHandHandling.Handled;
             }
+        }
+
+        private void OnCloseInventory(IPlayer player)
+        {
+            Console.WriteLine("Closing inventory");
+            TestMod mod = api.ModLoader.GetModSystem<TestMod>();
+            SeedBagInventory inventory = mod.seedBagInventories[player.PlayerUID];
+            inventory.SyncToSeedBag(player.InventoryManager.ActiveHotbarSlot);
+            mod.seedBagInventories.Remove(player.PlayerUID);
+            player.InventoryManager.ActiveHotbarSlot.MarkDirty();
         }
 
         public override bool OnHeldInteractStep(float secondsUsed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel)
