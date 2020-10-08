@@ -1,0 +1,19 @@
+{
+	code: "testblock",
+	creativeinventory: { "general": ["*"] },
+	shape: { base: "game:block/basic/cube" },
+	blockmaterial: "Stone",
+	drawtype: "Cube",
+	textures: {
+		verticals: { base: "block/testblock-topbottom" },
+		horizontals: { base: "block/testblock-side" }
+	},
+	resistance: 1.0,
+	sounds: {
+		"place": "game:block/anvil",
+		"walk": "game:walk/stone"
+	},
+	behaviors: [
+		{ name: "TestBlock" }
+	]
+}

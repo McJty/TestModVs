@@ -1,0 +1,13 @@
+{
+	"type": "code",
+	"name": "TestMod",
+	"modid": "testmod",
+	"version": "1.0.0",
+	
+	"description" : "A TestMod",
+	"authors": [ "McJty" ],
+	
+	"dependencies": {
+		"game": "1.13.0"
+	}
+}
