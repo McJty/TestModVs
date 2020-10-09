@@ -55,7 +55,8 @@ namespace Test
         {
             Console.WriteLine("OnSlotModified");
             TestMod mod = api.ModLoader.GetModSystem<TestMod>();
-            SeedBagInventory inventory = mod.seedBagInventories[playerID];
+            SeedBagInventory inventory;
+            mod.seedBagInventories.TryGetValue(playerID, out inventory);
             if (!(inventory is null))
             {
                 inventory.SyncToSeedBag(activeHotbarSlot);
@@ -67,7 +68,8 @@ namespace Test
         {
             Console.WriteLine("OnCloseInventory");
             TestMod mod = api.ModLoader.GetModSystem<TestMod>();
-            SeedBagInventory inventory = mod.seedBagInventories[player.PlayerUID];
+            SeedBagInventory inventory;
+            mod.seedBagInventories.TryGetValue(player.PlayerUID, out inventory);
             if (!(inventory is null))
             {
                 inventory.SyncToSeedBag(player.InventoryManager.ActiveHotbarSlot);

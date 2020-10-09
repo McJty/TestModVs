@@ -17,8 +17,11 @@ namespace Test
         {
             for (int i = 0; i < 8; i++)
             {
-                seedBagSlot.Itemstack.Attributes.SetItemstack("s" + i, slots[i].Itemstack);
-            }
+                if (!(seedBagSlot.Itemstack is null))
+                {
+                    seedBagSlot.Itemstack.Attributes.SetItemstack("s" + i, slots[i].Itemstack);
+                }
+            }                
         }
 
         internal void SyncFromSeedBag(ItemStack seedBagStack)
