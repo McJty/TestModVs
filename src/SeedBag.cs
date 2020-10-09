@@ -9,9 +9,9 @@ namespace Test
     public class SeedBag : Item
     {
 
-        public static SimpleParticleProperties particles = new SimpleParticleProperties(
+        private static SimpleParticleProperties particles = new SimpleParticleProperties(
                     1, 1,
-                    ColorUtil.ColorFromRgba(50, 220, 220, 220),
+                    ColorUtil.ColorFromRgba(50, 50, 50, 220),
                     new Vec3d(),
                     new Vec3d(),
                     new Vec3f(-0.25f, 0.1f, -0.25f),
@@ -28,7 +28,7 @@ namespace Test
 
         public override void OnHeldInteractStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
         {
-            if (blockSel == null)
+            if (byEntity.Controls.Sneak)
             {
                 SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
                 inventory.SyncFromSeedBag(slot.Itemstack);
@@ -41,21 +41,15 @@ namespace Test
                 
                 if (byEntity.World is IClientWorldAccessor)
                 {
-                    GuiSeedBag guiSeedBag = new GuiSeedBag(api as ICoreClientAPI, inventory);
+                    GuiSeedBag guiSeedBag = new GuiSeedBag(api as ICoreClientAPI, inventory, slot);
                     guiSeedBag.TryOpen();
                 }
-
-                handling = EnumHandHandling.NotHandled;
             }
-            else
-            {
-                handling = EnumHandHandling.Handled;
-            }
+            handling = EnumHandHandling.Handled;
         }
 
         private void OnCloseInventory(IPlayer player)
         {
-            Console.WriteLine("Closing inventory");
             TestMod mod = api.ModLoader.GetModSystem<TestMod>();
             SeedBagInventory inventory = mod.seedBagInventories[player.PlayerUID];
             inventory.SyncToSeedBag(player.InventoryManager.ActiveHotbarSlot);
@@ -65,6 +59,10 @@ namespace Test
 
         public override bool OnHeldInteractStep(float secondsUsed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel)
         {
+            if (byEntity.Controls.Sneak)
+            {
+                return false;
+            }
             if (byEntity.World is IClientWorldAccessor)
             {
                 ModelTransform tf = new ModelTransform();

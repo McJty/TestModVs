@@ -1,5 +1,6 @@
 using System;
 using Vintagestory.API.Client;
+using Vintagestory.API.Common;
 
 namespace Test
 {
@@ -11,10 +12,13 @@ namespace Test
 
 
         private SeedBagInventory inventory;
+        private ItemSlot slotGrid;
 
-        public GuiSeedBag(ICoreClientAPI api, SeedBagInventory inventory) : base(api)
+        public GuiSeedBag(ICoreClientAPI api, SeedBagInventory inventory, ItemSlot slot) : base(api)
         {
             this.inventory = inventory;
+            this.slotGrid = slot;
+
             SetupDialog();
             this.OnClosed += CloseMe;
         }
@@ -23,34 +27,46 @@ namespace Test
         {
             object packet = inventory.Close(capi.World.Player);
             capi.Network.SendPacketClient(packet);
-            TestMod mod = capi.ModLoader.GetModSystem<TestMod>();
-            mod.seedBagInventories.Remove(capi.World.Player.PlayerUID);
         }
 
         private void SetupDialog()
         {
             // Auto-sized dialog at the center of the screen
             ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog.WithAlignment(EnumDialogArea.CenterMiddle);
-
-            // Just a simple 300x300 pixel box
-            ElementBounds textBounds = ElementBounds.Fixed(0, 40, 300, 120);
+            ElementBounds invBounds = ElementBounds.Fixed(0, 40, 300, 120);
 
             // Background boundaries. Again, just make it fit it's child elements, then add the text as a child element
             ElementBounds bgBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);
             bgBounds.BothSizing = ElementSizing.FitToChildren;
-            bgBounds.WithChildren(textBounds);
+            bgBounds.WithChildren(invBounds);
 
             // Lastly, create the dialog
-            SingleComposer = capi.Gui.CreateCompo("myAwesomeDialog", dialogBounds)
-                .AddShadedDialogBG(bgBounds)
-                .AddItemSlotGrid(inventory, SendInvPacket, 4, textBounds)
-                .Compose()
-            ;
+            SingleComposer = capi.Gui.CreateCompo("SeedBagDialog", dialogBounds)
+                .AddDialogTitleBar("Seed Bag", OnTitleBarClose)
+                .AddShadedDialogBG(bgBounds);
+
+            SingleComposer
+                .AddItemSlotGrid(inventory, SendInvPacket, 4, invBounds)
+                .Compose();
+        }
+
+        public override void OnBeforeRenderFrame3D(float deltaTime)
+        {
+            base.OnBeforeRenderFrame3D(deltaTime);
+            if (!(slotGrid.Itemstack.Item is SeedBag))
+            {
+                TryClose();
+            }
         }
 
         private void SendInvPacket(object packet)
         {
             capi.Network.SendPacketClient(packet);
+        }
+
+        private void OnTitleBarClose()
+        {
+            TryClose();
         }
 
     }
