@@ -32,13 +32,16 @@ namespace Test
             {
                 SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
                 inventory.SyncFromSeedBag(slot.Itemstack);
+                inventory.ResolveBlocksOrItems();
                 inventory.OnInventoryClosed += OnCloseInventory;
+                IPlayer player = (byEntity as EntityPlayer).Player;
 
                 TestMod mod = api.ModLoader.GetModSystem<TestMod>();
-                mod.seedBagInventories.Add((byEntity as EntityPlayer).Player.PlayerUID, inventory);
+                mod.seedBagInventories.Add(player.PlayerUID, inventory);
+                inventory.SlotModified += index => OnSlotModified(player.PlayerUID, player.InventoryManager.ActiveHotbarSlot, index);
 
-                (byEntity as EntityPlayer).Player.InventoryManager.OpenInventory(inventory);
-                
+                player.InventoryManager.OpenInventory(inventory);
+
                 if (byEntity.World is IClientWorldAccessor)
                 {
                     GuiSeedBag guiSeedBag = new GuiSeedBag(api as ICoreClientAPI, inventory, slot);
@@ -48,13 +51,29 @@ namespace Test
             handling = EnumHandHandling.Handled;
         }
 
+        private void OnSlotModified(string playerID, ItemSlot activeHotbarSlot, int index)
+        {
+            Console.WriteLine("OnSlotModified");
+            TestMod mod = api.ModLoader.GetModSystem<TestMod>();
+            SeedBagInventory inventory = mod.seedBagInventories[playerID];
+            if (!(inventory is null))
+            {
+                inventory.SyncToSeedBag(activeHotbarSlot);
+                activeHotbarSlot.MarkDirty();
+            }
+        }
+
         private void OnCloseInventory(IPlayer player)
         {
+            Console.WriteLine("OnCloseInventory");
             TestMod mod = api.ModLoader.GetModSystem<TestMod>();
             SeedBagInventory inventory = mod.seedBagInventories[player.PlayerUID];
-            inventory.SyncToSeedBag(player.InventoryManager.ActiveHotbarSlot);
-            mod.seedBagInventories.Remove(player.PlayerUID);
-            player.InventoryManager.ActiveHotbarSlot.MarkDirty();
+            if (!(inventory is null))
+            {
+                inventory.SyncToSeedBag(player.InventoryManager.ActiveHotbarSlot);
+                mod.seedBagInventories.Remove(player.PlayerUID);
+                player.InventoryManager.ActiveHotbarSlot.MarkDirty();
+            }
         }
 
         public override bool OnHeldInteractStep(float secondsUsed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel)
