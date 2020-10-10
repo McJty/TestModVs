@@ -2,6 +2,8 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Client;
 using Vintagestory.API.MathTools;
 using System;
+using Vintagestory.GameContent;
+using Vintagestory.API.Server;
 
 namespace Test
 {
@@ -9,46 +11,81 @@ namespace Test
     public class SeedBag : Item
     {
 
-        private static SimpleParticleProperties particles = new SimpleParticleProperties(
-                    1, 1,
-                    ColorUtil.ColorFromRgba(50, 50, 50, 220),
-                    new Vec3d(),
-                    new Vec3d(),
-                    new Vec3f(-0.25f, 0.1f, -0.25f),
-                    new Vec3f(0.25f, 0.1f, 0.25f),
-                    1.5f,
-                    -0.075f,
-                    0.25f,
-                    0.25f,
-                    EnumParticleModel.Quad
-                );
-
-
         public static string NAME { get; } = "SeedBag";
 
         public override void OnHeldInteractStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
         {
             if (byEntity.Controls.Sneak)
             {
-                SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
-                inventory.SyncFromSeedBag(slot.Itemstack);
-                inventory.ResolveBlocksOrItems();
-                inventory.OnInventoryClosed += OnCloseInventory;
-                IPlayer player = (byEntity as EntityPlayer).Player;
-
-                TestMod mod = api.ModLoader.GetModSystem<TestMod>();
-                mod.seedBagInventories.Add(player.PlayerUID, inventory);
-                inventory.SlotModified += index => OnSlotModified(player.PlayerUID, player.InventoryManager.ActiveHotbarSlot, index);
-
-                player.InventoryManager.OpenInventory(inventory);
-
-                if (byEntity.World is IClientWorldAccessor)
+                OpenSeedBagGui(slot, byEntity);
+            }
+            else
+            {
+                if (byEntity.World is IServerWorldAccessor)
                 {
-                    GuiSeedBag guiSeedBag = new GuiSeedBag(api as ICoreClientAPI, inventory, slot);
-                    guiSeedBag.TryOpen();
+                    TryPlacingSeeds(slot, byEntity, blockSel);
                 }
             }
             handling = EnumHandHandling.Handled;
+        }
+
+        private void TryPlacingSeeds(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel)
+        {
+            if (blockSel == null) return;
+
+            IPlayer byPlayer = (byEntity as EntityPlayer) ?. Player;
+
+            BlockPos pos = blockSel.Position;
+
+            SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
+            inventory.SyncFromSeedBag(slot.Itemstack);
+
+            for (int x = -1 ; x <= 1 ; x++)
+            {
+                for (int z = -1 ; z <= 1 ; z++)
+                {
+                    BlockPos p = pos.AddCopy(x, 0, z);
+                    blockSel.Position = p;
+                    BlockEntity be = byEntity.World.BlockAccessor.GetBlockEntity(p);
+                    if (be is BlockEntityFarmland)
+                    {
+                        foreach (ItemSlot seedSlot in inventory.slots)
+                        {
+                            ItemStack seed = seedSlot.Itemstack;
+                            if (!(seed is null) && !(seed.Item is null) && seed.StackSize > 0)
+                            {
+                                EnumHandHandling handling = EnumHandHandling.Handled;
+                                seed.Item.OnHeldInteractStart(seedSlot, byEntity, blockSel, null, false, ref handling);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            inventory.SyncToSeedBag(slot);
+            slot.MarkDirty();
+        }
+
+        private void OpenSeedBagGui(ItemSlot slot, EntityAgent byEntity)
+        {
+            SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
+            inventory.SyncFromSeedBag(slot.Itemstack);
+            inventory.ResolveBlocksOrItems();
+            inventory.OnInventoryClosed += OnCloseInventory;
+            IPlayer player = (byEntity as EntityPlayer).Player;
+
+            TestMod mod = api.ModLoader.GetModSystem<TestMod>();
+            mod.seedBagInventories.Add(player.PlayerUID, inventory);
+            inventory.SlotModified += index => OnSlotModified(player.PlayerUID, player.InventoryManager.ActiveHotbarSlot, index);
+
+            player.InventoryManager.OpenInventory(inventory);
+
+            if (byEntity.World is IClientWorldAccessor)
+            {
+                GuiSeedBag guiSeedBag = new GuiSeedBag(api as ICoreClientAPI, inventory, slot);
+                guiSeedBag.TryOpen();
+            }
         }
 
         private void OnSlotModified(string playerID, ItemSlot activeHotbarSlot, int index)
@@ -78,42 +115,23 @@ namespace Test
             }
         }
 
-        public override bool OnHeldInteractStep(float secondsUsed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel)
+        public override WorldInteraction[] GetHeldInteractionHelp(ItemSlot inSlot)
         {
-            if (byEntity.Controls.Sneak)
+            return new WorldInteraction[]
             {
-                return false;
-            }
-            if (byEntity.World is IClientWorldAccessor)
-            {
-                ModelTransform tf = new ModelTransform();
-                tf.EnsureDefaultValues();
-
-                tf.Origin.Set(0, -1, 0);
-                tf.Rotation.Z = Math.Min(30, secondsUsed * 40);
-                byEntity.Controls.UsingHeldItemTransformAfter = tf;
-
-                if (secondsUsed > 0.6)
+                new WorldInteraction
                 {
-                    Vec3d pos = byEntity.Pos.XYZ.Add(0, byEntity.LocalEyePos.Y, 0)
-                            .Ahead(1f, byEntity.Pos.Pitch, byEntity.Pos.Yaw);
-                    Vec3f speedVec = new Vec3d(0, 0, 0).Ahead(5, byEntity.Pos.Pitch, byEntity.Pos.Yaw).ToVec3f();
-                    particles.MinVelocity = speedVec;
-                    Random rand = new Random();
-                    particles.Color = ColorUtil.ColorFromRgba(255, rand.Next(0, 255), rand.Next(0, 255), rand.Next(0, 255));
-                    particles.MinPos = pos.AddCopy(-0.05, -0.05, -0.05);
-                    particles.AddPos.Set(0.1, 0.1, 0.1);
-                    particles.MinSize = 0.1F;
-                    particles.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.SINUS, 10);
-                    byEntity.World.SpawnParticles(particles);
+                    HotKeyCode = "sneak",
+                    ActionLangCode = "heldhelp-gui",
+                    MouseButton = EnumMouseButton.Right
+                },
+                new WorldInteraction
+                {
+                    ActionLangCode = "heldhelp-plant",
+                    MouseButton = EnumMouseButton.Right
                 }
-            }
-            return true;
-        }
 
-        public override void OnHeldInteractStop(float secondsUsed, ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel)
-        {
-            base.OnHeldInteractStop(secondsUsed, slot, byEntity, blockSel, entitySel);
+            };//.Append(base.GetHeldInteractionHelp(inSlot));
         }
 
     }

@@ -1,12 +1,13 @@
 using Vintagestory.API.Common;
 using Vintagestory.API.Datastructures;
+using Vintagestory.GameContent;
 
 namespace Test
 {
     public class SeedBagInventory : InventoryBase
     {
 
-        ItemSlot[] slots;
+        internal ItemSlot[] slots;
 
         public SeedBagInventory(string className, string instanceID, ICoreAPI api) : base(className, instanceID, api)
         {
@@ -22,6 +23,15 @@ namespace Test
                     seedBagSlot.Itemstack.Attributes.SetItemstack("s" + i, slots[i].Itemstack);
                 }
             }                
+        }
+
+        public override float GetSuitability(ItemSlot sourceSlot, ItemSlot targetSlot, bool isMerge)
+        {
+            if (!(sourceSlot.Itemstack?.Item is ItemPlantableSeed))
+            {
+                return 0;
+            }
+            return base.GetSuitability(sourceSlot, targetSlot, isMerge);
         }
 
         internal void SyncFromSeedBag(ItemStack seedBagStack)
