@@ -7,22 +7,33 @@ namespace Test
     public class SeedBagInventory : InventoryBase
     {
 
+        internal ItemSlot seedBagSlot;
+
         internal ItemSlot[] slots;
 
-        public SeedBagInventory(string className, string instanceID, ICoreAPI api) : base(className, instanceID, api)
+        public SeedBagInventory(string className, string instanceID, ICoreAPI api, ItemSlot seedBagSlot) : base(className, instanceID, api)
         {
-            slots = GenEmptySlots(8);
+            slots = new ItemSlot[8];
+            for (int i = 0 ; i < 8 ; i++)
+            {
+                slots[i] = new ItemSlotSeeds(this);
+            }
+            this.seedBagSlot = seedBagSlot;
         }
 
-        public void SyncToSeedBag(ItemSlot seedBagSlot)
+        public void SyncToSeedBag()
         {
-            for (int i = 0; i < 8; i++)
+            if (seedBagSlot.Itemstack != null && seedBagSlot.Itemstack.Item is SeedBag)
             {
-                if (!(seedBagSlot.Itemstack is null))
+                for (int i = 0; i < 8; i++)
                 {
-                    seedBagSlot.Itemstack.Attributes.SetItemstack("s" + i, slots[i].Itemstack);
-                }
-            }                
+                    if (!(seedBagSlot.Itemstack is null))
+                    {
+                        seedBagSlot.Itemstack.Attributes.SetItemstack("s" + i, slots[i].Itemstack);
+                    }
+                }    
+                seedBagSlot.MarkDirty();            
+            }
         }
 
         public override float GetSuitability(ItemSlot sourceSlot, ItemSlot targetSlot, bool isMerge)
@@ -34,11 +45,14 @@ namespace Test
             return base.GetSuitability(sourceSlot, targetSlot, isMerge);
         }
 
-        internal void SyncFromSeedBag(ItemStack seedBagStack)
+        internal void SyncFromSeedBag()
         {
-            for (int i = 0; i < 8; i++)
+            if (seedBagSlot.Itemstack != null && seedBagSlot.Itemstack.Item is SeedBag)
             {
-                slots[i].Itemstack = seedBagStack.Attributes.GetItemstack("s" + i);
+                for (int i = 0; i < 8; i++)
+                {
+                    slots[i].Itemstack = seedBagSlot.Itemstack.Attributes.GetItemstack("s" + i);
+                }
             }
         }
 

@@ -13,6 +13,13 @@ namespace Test
 
         public static string NAME { get; } = "SeedBag";
 
+        public override void OnHeldIdle(ItemSlot slot, EntityAgent byEntity)
+        {
+            base.OnHeldIdle(slot, byEntity);
+        }
+
+        public override 
+
         public override void OnHeldInteractStart(ItemSlot slot, EntityAgent byEntity, BlockSelection blockSel, EntitySelection entitySel, bool firstEvent, ref EnumHandHandling handling)
         {
             if (byEntity.Controls.Sneak)
@@ -37,8 +44,8 @@ namespace Test
 
             BlockPos pos = blockSel.Position;
 
-            SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
-            inventory.SyncFromSeedBag(slot.Itemstack);
+            SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api, slot);
+            inventory.SyncFromSeedBag();
 
             for (int x = -1 ; x <= 1 ; x++)
             {
@@ -63,14 +70,13 @@ namespace Test
                 }
             }
 
-            inventory.SyncToSeedBag(slot);
-            slot.MarkDirty();
+            inventory.SyncToSeedBag();
         }
 
         private void OpenSeedBagGui(ItemSlot slot, EntityAgent byEntity)
         {
-            SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api);
-            inventory.SyncFromSeedBag(slot.Itemstack);
+            SeedBagInventory inventory = new SeedBagInventory("seedbagInv", "id", api, slot);
+            inventory.SyncFromSeedBag();
             inventory.ResolveBlocksOrItems();
             inventory.OnInventoryClosed += OnCloseInventory;
             IPlayer player = (byEntity as EntityPlayer).Player;
@@ -96,8 +102,7 @@ namespace Test
             mod.seedBagInventories.TryGetValue(playerID, out inventory);
             if (!(inventory is null))
             {
-                inventory.SyncToSeedBag(activeHotbarSlot);
-                activeHotbarSlot.MarkDirty();
+                inventory.SyncToSeedBag();
             }
         }
 
@@ -109,9 +114,8 @@ namespace Test
             mod.seedBagInventories.TryGetValue(player.PlayerUID, out inventory);
             if (!(inventory is null))
             {
-                inventory.SyncToSeedBag(player.InventoryManager.ActiveHotbarSlot);
+                inventory.SyncToSeedBag();
                 mod.seedBagInventories.Remove(player.PlayerUID);
-                player.InventoryManager.ActiveHotbarSlot.MarkDirty();
             }
         }
 
@@ -122,7 +126,7 @@ namespace Test
                 new WorldInteraction
                 {
                     HotKeyCode = "sneak",
-                    ActionLangCode = "heldhelp-gui",
+                    ActionLangCode = "testmod:heldhelp-gui",
                     MouseButton = EnumMouseButton.Right
                 },
                 new WorldInteraction
@@ -131,7 +135,7 @@ namespace Test
                     MouseButton = EnumMouseButton.Right
                 }
 
-            };//.Append(base.GetHeldInteractionHelp(inSlot));
+            };
         }
 
     }

@@ -1,3 +1,5 @@
 {
-    "seedbag": "Seed Bag"
+    "item-seedbag": "Seed Bag",
+
+    "heldhelp-gui": "Open GUI"
 }
